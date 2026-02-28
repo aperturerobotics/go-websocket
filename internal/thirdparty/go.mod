@@ -1,6 +1,6 @@
 module github.com/aperturerobotics/go-websocket/internal/thirdparty
 
-go 1.23
+go 1.25
 
 replace github.com/aperturerobotics/go-websocket => ../..
 
