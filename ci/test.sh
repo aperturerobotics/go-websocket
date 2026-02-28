@@ -24,10 +24,10 @@ cd -- "$(dirname "$0")/.."
 )
 
 
-go install github.com/agnivade/wasmbrowsertest@8be019f6c6dceae821467b4c589eb195c2b761ce
+go install github.com/agnivade/wasmbrowsertest@eec8f6b3828fd793968ed35171566ab20de7b4cc
 go test --race --bench=. --timeout=1h --covermode=atomic --coverprofile=ci/out/coverage.prof --coverpkg=./... "$@" ./...
 sed -i.bak '/stringer\.go/d' ci/out/coverage.prof
-sed -i.bak '/nhooyr.io\/websocket\/internal\/test/d' ci/out/coverage.prof
+sed -i.bak '/internal\/test/d' ci/out/coverage.prof
 sed -i.bak '/examples/d' ci/out/coverage.prof
 
 # Last line is the total coverage.

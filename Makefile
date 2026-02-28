@@ -11,7 +11,7 @@ lint:
 
 .PHONY: test
 test:
-	./ci/test.sh
+	./ci/test.sh $(ARGS)
 
 .PHONY: bench
 bench:
