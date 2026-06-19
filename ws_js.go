@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"reflect"
 	"runtime"
 	"strings"
 	"sync"
@@ -183,7 +182,7 @@ func (c *Conn) read(ctx context.Context) (MessageType, []byte, error) {
 	case []byte:
 		return MessageBinary, p, nil
 	default:
-		panic("websocket: unexpected data type from wsjs OnMessage: " + reflect.TypeOf(me.Data).String())
+		panic(fmt.Sprintf("websocket: unexpected data type from wsjs OnMessage: %T", me.Data))
 	}
 }
 
