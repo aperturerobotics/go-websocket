@@ -132,9 +132,14 @@ func (c WebSocket) OnOpen(fn func(e js.Value)) (remove func()) {
 	return c.addEventListener("open", fn)
 }
 
-// Close closes the WebSocket with the given code and reason.
+// Close closes the WebSocket. Browser-forbidden protocol codes use normal wire
+// closure; the calling connection retains its requested local close error.
 func (c WebSocket) Close(code int, reason string) (err error) {
 	defer handleJSError(&err, nil)
+	if code != 1000 && (code < 3000 || code > 4999) {
+		// The browser API permits only 1000 or application codes 3000-4999.
+		code = 1000
+	}
 	c.v.Call("close", code, reason)
 	return err
 }
