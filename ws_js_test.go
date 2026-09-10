@@ -51,3 +51,22 @@ func TestWasmDialTimeout(t *testing.T) {
 		t.Fatal("wasm context dial timeout is not working", time.Since(beforeDial))
 	}
 }
+
+// TestWasmCloseCodes closes real browser sockets through ordinary cleanup and
+// protocol-error paths, which cannot send reserved codes through the JS API.
+func TestWasmCloseCodes(t *testing.T) {
+	for _, code := range []websocket.StatusCode{websocket.StatusGoingAway, websocket.StatusPolicyViolation, websocket.StatusInternalError} {
+		t.Run(code.String(), func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+			defer cancel()
+			conn, _, err := websocket.Dial(ctx, os.Getenv("WS_ECHO_SERVER_URL"), nil)
+			assert.Success(t, err)
+			if code == websocket.StatusGoingAway {
+				err = conn.CloseNow()
+			} else {
+				err = conn.Close(code, "closing")
+			}
+			assert.Success(t, err)
+		})
+	}
+}
