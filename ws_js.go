@@ -98,9 +98,10 @@ func (c *Conn) init() {
 		c.releaseOnMessage()
 	})
 
-	c.releaseOnError = c.ws.OnError(func(v js.Value) {
-		c.setCloseErr(errors.New(v.Get("message").String()))
-		c.closeWithInternal()
+	c.releaseOnError = c.ws.OnError(func(js.Value) {
+		// A browser failure emits error before close. This callback must return
+		// to the JavaScript event loop before the close event can be delivered.
+		c.close(errors.New("WebSocket error"), false)
 	})
 
 	c.releaseOnMessage = c.ws.OnMessage(func(e wsjs.MessageEvent) {
