@@ -448,7 +448,21 @@ func TestWasm(t *testing.T) {
 		t.SkipNow()
 	}
 
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/hold" {
+			conn, err := websocket.Accept(w, r, &websocket.AcceptOptions{InsecureSkipVerify: true})
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			defer conn.CloseNow()
+			// Deliberately leave the close frame unread and unacknowledged.
+			<-ctx.Done()
+			return
+		}
 		err := echoServer(w, r, &websocket.AcceptOptions{
 			Subprotocols:       []string{"echo"},
 			InsecureSkipVerify: true,
@@ -457,10 +471,10 @@ func TestWasm(t *testing.T) {
 			t.Error(err)
 		}
 	}))
-	defer s.Close()
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-	defer cancel()
+	defer func() {
+		cancel()
+		s.Close()
+	}()
 
 	cmd := exec.CommandContext(ctx, "go", "test", "-exec=wasmbrowsertest", ".", "-v")
 	cmd.Env = append(cleanEnv(os.Environ()), "GOOS=js", "GOARCH=wasm", fmt.Sprintf("WS_ECHO_SERVER_URL=%v", s.URL))

@@ -70,3 +70,32 @@ func TestWasmCloseCodes(t *testing.T) {
 		})
 	}
 }
+
+// TestWasmCloseNowWithoutPeerHandshake closes locally even when the peer never
+// reads its close frame, releasing a concurrent read before the browser timeout.
+func TestWasmCloseNowWithoutPeerHandshake(t *testing.T) {
+	ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
+	defer cancel()
+	conn, _, err := websocket.Dial(ctx, os.Getenv("WS_ECHO_SERVER_URL")+"/hold", nil)
+	assert.Success(t, err)
+	readDone := make(chan error, 1)
+	go func() {
+		_, _, err := conn.Read(ctx)
+		readDone <- err
+	}()
+	closed := make(chan error, 1)
+	go func() { closed <- conn.CloseNow() }()
+	select {
+	case err := <-closed:
+		assert.Success(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("CloseNow waited for the peer's close handshake")
+	}
+	select {
+	case err := <-readDone:
+		assert.Error(t, err)
+	case <-time.After(time.Second):
+		t.Fatal("CloseNow did not release the reader")
+	}
+	assert.Error(t, conn.Write(ctx, websocket.MessageText, []byte("closed")))
+}

@@ -235,13 +235,19 @@ func (c *Conn) Close(code StatusCode, reason string) error {
 	return nil
 }
 
-// CloseNow closes the WebSocket connection without attempting a close handshake.
-// Use when you do not want the overhead of the close handshake.
-//
-// note: No different from Close(StatusGoingAway, "") in WASM as there is no way to close
-// a WebSocket without the close handshake.
+// CloseNow closes the connection locally without waiting for the peer.
+// The browser completes its required wire handshake in the background.
 func (c *Conn) CloseNow() error {
-	return c.Close(StatusGoingAway, "")
+	if c.isClosed() {
+		return net.ErrClosed
+	}
+	if err := c.ws.Close(int(StatusGoingAway), ""); err != nil {
+		return fmt.Errorf("failed to immediately close WebSocket: %w", err)
+	}
+	// Do not acquire closingMu: an ongoing Close may already hold it while
+	// waiting for the peer. Publishing closure releases that waiter too.
+	c.close(CloseError{Code: StatusGoingAway}, false)
+	return nil
 }
 
 func (c *Conn) exportedClose(code StatusCode, reason string) error {
